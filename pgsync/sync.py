@@ -1470,6 +1470,23 @@ class Sync(Base, metaclass=Singleton):
                 if not doc:
                     continue
 
+                # Handle plugin-triggered deletes for soft-delete pattern
+                if doc.get('_source', {}).get('_op_type') == 'delete':
+                    doc = {
+                        "_id": self.get_doc_id(primary_keys, node.table),
+                        "_index": self.index,
+                        '_op_type': 'delete',
+                    }
+                    if '_routing' in doc:
+                        doc['_routing'] = doc['_routing']
+                    if (
+                        self.search_client.major_version < 7
+                        and not self.search_client.is_opensearch
+                    ):
+                        doc['_type'] = '_doc'
+                    yield doc
+                    continue
+
             if self.pipeline:
                 doc["pipeline"] = self.pipeline
 
