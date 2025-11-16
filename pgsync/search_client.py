@@ -376,17 +376,18 @@ def get_search_client(
         None
     """
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
-        credentials = boto3.Session().get_credentials()
+        # Create a session that refreshes credentials automatically
+        session = boto3.Session()
+        credentials = session.get_credentials()
+
         service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
         if settings.OPENSEARCH:
             return client(
                 hosts=[url],
                 http_auth=AWS4Auth(
-                    credentials.access_key,
-                    credentials.secret_key,
-                    settings.ELASTICSEARCH_AWS_REGION,
-                    service,
-                    session_token=credentials.token,
+                    region=settings.ELASTICSEARCH_AWS_REGION,
+                    service=service,
+                    refreshable_credentials=credentials,
                 ),
                 verify_certs=True,
                 connection_class=connection_class,
@@ -397,11 +398,9 @@ def get_search_client(
             return client(
                 hosts=[url],
                 http_auth=AWS4Auth(
-                    credentials.access_key,
-                    credentials.secret_key,
-                    settings.ELASTICSEARCH_AWS_REGION,
-                    service,
-                    session_token=credentials.token,
+                    region=settings.ELASTICSEARCH_AWS_REGION,
+                    service=service,
+                    refreshable_credentials=credentials,
                 ),
                 verify_certs=True,
                 node_class=node_class,
